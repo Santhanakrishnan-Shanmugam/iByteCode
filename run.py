@@ -18,8 +18,8 @@ PORT = int(os.getenv("PORT"))
 
 app = FastAPI()
 
-app.include_router(user_router, prefix="/api/users")
-#app.include_router(mongorouter,prefix="/api/users")
+#app.include_router(updated_router, prefix="/api/users")
+app.include_router(mongorouter,prefix="/api/users")
 @app.get("/")
 def g():
     return {"message": "From run"}

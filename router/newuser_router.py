@@ -22,7 +22,7 @@ class Address(BaseModel):
 class Data(BaseModel):
     name: str
     mail: str
-    address: Address
+    address:Address
 
     class Config:
         extra = "allow"  # allow extra fields dynamically
@@ -37,6 +37,7 @@ address = db["address"]
 @router.post("/create")
 def create(user: Data):
     # Check if user already exists
+    
     if users.find_one(mail=user.mail):
         raise HTTPException(status_code=400, detail="User already exists")
     
@@ -67,17 +68,21 @@ def fetch_all(
 ):
     if id is not None:
         res = users.find_one(id=id)
+        add=address.find_one(id=id)
     elif mail is not None:
         res = users.find_one(mail=mail)
+        
+        if res:
+            add=address.find_one(id=res['id'])
     elif name is not None:
         res = users.find_one(name=name)
-    else:
-        res = list(users.all())
-
+        if res:
+            add=address.find_one(id=res['id'])
+    
     if not res:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return {"data": res}
+    return {"data": res,"address":add}
 
 
 # ---------------- FETCH BY ID ----------------
@@ -85,21 +90,50 @@ def fetch_all(
 @router.get("/fetch/{id}")
 def fetch_by_id(id: int):
     res = users.find_one(id=id)
+    if res:
+        add=address.find_one(id=res["id"])
     if not res:
         raise HTTPException(status_code=404, detail="User not found")
-    return {"data": res}
+    return {"data": res,"address":add}
 
 
 # ---------------- UPDATE ----------------
 
 @router.put("/update/{id}")
-def update(id: int, address):
+def update(
+    id: int,
+    line1: Optional[str] = None,
+    line2: Optional[str] = None,
+    city: Optional[str] = None,
+    state: Optional[str] = None,
+    zip: Optional[str] = None
+):
     res = users.find_one(id=id)
     if not res:
         raise HTTPException(status_code=404, detail="User not found")
 
-    users.update({"id": id}, address)
-    return {"message": "User updated", "updated_fields": address}
+    update_data = {}
+
+    if line1 :
+        update_data["line1"] = line1
+    if line2 :
+        update_data["line2"] = line2
+    if city :
+        update_data["city"] = city
+    if state :
+        update_data["state"] = state
+    if zip :
+        update_data["zip"] = zip
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    id=res['id']
+    address.update({'id':id,** update_data} ,["id"])
+
+    return {
+        "message": "User updated",
+        "updated_fields": update_data
+    }
 
 
 # ---------------- DELETE ----------------
